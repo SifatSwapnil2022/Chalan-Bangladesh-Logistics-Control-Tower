@@ -64,7 +64,7 @@ export function NetworkMap({ lanes, volumes }: { lanes: LaneStat[]; volumes: Map
     <div className="map">
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Map of Bangladesh with freight lanes coloured by on-time delivery">
         <path d={path(bd) ?? ''} className="map-land" />
-        <text x={150} y={H - 50} className="map-sea">
+        <text x={300} y={H - 18} className="map-sea">
           Bay of Bengal
         </text>
         {curves

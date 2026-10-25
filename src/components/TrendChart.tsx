@@ -80,7 +80,7 @@ export function TrendChart({ points }: { points: MonthPoint[] }) {
               onMouseLeave={() => setHover(null)}
             />
             {i % 2 === (points.length - 1) % 2 ? (
-              <text x={x(i)} y={H - 8} textAnchor="middle" className="trend-axis">
+              <text x={x(i)} y={H - 8} textAnchor={i === points.length - 1 ? 'end' : 'middle'} className="trend-axis">
                 {monthLabel(p.key)}
               </text>
             ) : null}
