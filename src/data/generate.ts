@@ -32,6 +32,9 @@ export interface Shipment {
   freightBdt: number
   surchargeBdt: number
   handlingBdt: number
+  customer: string // e.g. "RMG-07"
+  vehicle: string
+  cargoValueBdt: number
   // what was known at dispatch (used later by the delay-risk model)
   f: { monsoon: number; eid: number; port: number; load: number; peakHour: number; friday: number }
 }
@@ -73,7 +76,7 @@ function daysToEid(ms: number) {
 }
 
 /** Chattogram port congestion, 0–1, by month: worse before the RMG peak and in the monsoon. */
-const PORT_BY_MONTH = [0.5, 0.42, 0.65, 0.6, 0.55, 0.62, 0.72, 0.8, 0.66, 0.88, 0.95, 0.85]
+export const PORT_BY_MONTH = [0.5, 0.42, 0.65, 0.6, 0.55, 0.62, 0.72, 0.8, 0.66, 0.88, 0.95, 0.85]
 
 function haversineKm(a: string, b: string) {
   const A = hubById[a]
@@ -117,6 +120,8 @@ export function generate(): Shipment[] {
   let seq = 0
 
   type Draft = Omit<Shipment, 'delivered' | 'status' | 'delayHours' | 'reason' | 'f'> & { day: number }
+  const VALUE_PER_KG: Record<Segment, number> = { RMG: 1150, FMCG: 260, Pharma: 3800, 'E-commerce': 1400, Electronics: 3300 }
+  const CUSTOMERS_PER_SEGMENT: Record<Segment, number> = { RMG: 14, FMCG: 9, Pharma: 5, 'E-commerce': 8, Electronics: 6 }
   const drafts: Draft[] = []
 
   for (let day = 0; day <= days; day++) {
@@ -169,6 +174,10 @@ export function generate(): Shipment[] {
         dispatch,
         promised,
         freightBdt: Math.round(freight),
+        customer: `${segment.id === 'E-commerce' ? 'ECM' : segment.id === 'Electronics' ? 'ELC' : segment.id === 'Pharma' ? 'PHA' : segment.id}-${String(1 + Math.floor(Math.pow(rand(), 1.6) * CUSTOMERS_PER_SEGMENT[segment.id])).padStart(2, '0')}`,
+        vehicle:
+          lane.mode === 'sea' ? '40 ft container' : lane.mode === 'air' ? 'Air cargo' : weightKg <= 3000 ? 'Covered van, 3 t' : weightKg <= 7500 ? 'Covered van, 7.5 t' : 'Truck, 15 t',
+        cargoValueBdt: Math.round((weightKg * VALUE_PER_KG[segment.id] * (0.75 + rand() * 0.5)) / 100) * 100,
         surchargeBdt: Math.round(surcharge),
         handlingBdt: handling,
         day,

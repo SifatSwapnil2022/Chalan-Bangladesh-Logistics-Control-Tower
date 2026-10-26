@@ -1,0 +1,9 @@
+carrier_id,carrier_name,mode
+PFL,Padma Freight Lines,road
+MGT,Meghna Transport,road
+KFM,Karnaphuli Movers,road
+JMH,Jamuna Haulage,road
+BLS,Bay Link Shipping,sea
+SSC,Sundarban Sea Cargo,sea
+SKY,Skyway Cargo,air
+DAF,Delta Air Freight,air

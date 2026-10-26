@@ -1,0 +1,91 @@
+{
+ "cleaning": {
+  "raw_rows": 23770,
+  "clean_rows": 23596,
+  "scored_rows": 23369,
+  "in_transit": 139,
+  "issues": [
+   {
+    "issue": "Duplicate rows",
+    "action": "Removed exact copies of a row",
+    "rows": 174
+   },
+   {
+    "issue": "Hub names",
+    "action": "Mapped spelling variants (e.g. 'CTG Port', 'Narayangonj') to one hub code",
+    "rows": 1463
+   },
+   {
+    "issue": "Date format",
+    "action": "Converted DD/MM/YYYY HH:MM rows to ISO time",
+    "rows": 549
+   },
+   {
+    "issue": "Missing delivery time",
+    "action": "Kept, but excluded from on-time and delay measures",
+    "rows": 88
+   },
+   {
+    "issue": "Weight unit",
+    "action": "Road loads under 50 kg multiplied by 1,000 (entered in tonnes)",
+    "rows": 68
+   },
+   {
+    "issue": "Negative freight",
+    "action": "Sign flipped; amounts match the lane's normal range",
+    "rows": 56
+   }
+  ]
+ },
+ "postgres": {
+  "rows": 23596,
+  "checks": [
+   {
+    "check": "late without a reason",
+    "rows": 0
+   },
+   {
+    "check": "in transit but delivered",
+    "rows": 0
+   },
+   {
+    "check": "delivered before dispatch",
+    "rows": 0
+   },
+   {
+    "check": "promised before dispatch",
+    "rows": 0
+   },
+   {
+    "check": "on-time flag disagrees with times",
+    "rows": 0
+   },
+   {
+    "check": "shipments without a lane",
+    "rows": 0
+   },
+   {
+    "check": "cost parts do not add up",
+    "rows": 0
+   }
+  ],
+  "tables": [
+   "fact_shipment",
+   "dim_lane",
+   "dim_hub",
+   "dim_carrier",
+   "dim_customer",
+   "dim_date",
+   "ref_holiday",
+   "ref_port_congestion",
+   "shipment_risk"
+  ],
+  "views": [
+   "v_kpi_monthly",
+   "v_lane_performance_90d",
+   "v_carrier_scorecard_90d",
+   "v_delay_causes_90d",
+   "v_open_exceptions"
+  ]
+ }
+}

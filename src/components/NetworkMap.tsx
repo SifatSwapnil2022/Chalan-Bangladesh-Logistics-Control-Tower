@@ -1,28 +1,26 @@
 import { geoMercator, geoPath } from 'd3-geo'
 import type { Feature, Geometry } from 'geojson'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import bangladesh from '../data/bangladesh.json'
-import { OTD_TARGET, type LaneStat } from '../data/metrics'
-import { HUBS, MODE_LABEL, hubById } from '../data/network'
+import { OTD_TARGET, type Stats } from '../data/metrics'
+import { HUBS, MODE_LABEL, hubById, type Mode } from '../data/network'
 import { bdt, hours, int, pct } from '../lib/format'
 
 const W = 560
-const H = 620
+const H = 600
 const bd = bangladesh as unknown as Feature<Geometry>
 const projection = geoMercator().fitExtent(
   [
-    [40, 20],
-    [W - 30, H - 20],
+    [40, 16],
+    [W - 30, H - 16],
   ],
   bd,
 )
 const path = geoPath(projection)
 const xy = (id: string) => projection([hubById[id].lon, hubById[id].lat])!
 
-/** Hand-placed labels: the Dhaka cluster is too tight for automatic placement. */
 const LABEL: Record<string, { dx: number; dy: number; anchor: 'start' | 'end' | 'middle' }> = {
   DHK: { dx: -10, dy: 16, anchor: 'end' },
-  HSIA: { dx: -8, dy: -6, anchor: 'end' },
   GZP: { dx: 8, dy: -8, anchor: 'start' },
   SVR: { dx: -9, dy: 2, anchor: 'end' },
   NGJ: { dx: -6, dy: 18, anchor: 'end' },
@@ -35,97 +33,124 @@ const LABEL: Record<string, { dx: number; dy: number; anchor: 'start' | 'end' | 
 
 export const statusColor = (otd: number) => (otd >= OTD_TARGET ? 'var(--ok)' : otd >= 80 ? 'var(--warn)' : 'var(--bad)')
 
-export function NetworkMap({ lanes, volumes }: { lanes: LaneStat[]; volumes: Map<string, number> }) {
+export type LaneRow = Stats & { key: string; from: string; to: string; mode: Mode }
+
+export function NetworkMap({
+  lanes,
+  selected,
+  onSelect,
+  onOpen,
+}: {
+  lanes: LaneRow[]
+  selected: string | null
+  onSelect: (lane: string | null) => void
+  onOpen: (lane: string) => void
+}) {
   const [hover, setHover] = useState<string | null>(null)
   const domestic = lanes.filter((l) => !hubById[l.from].international && !hubById[l.to].international)
-  const abroad = lanes.filter((l) => hubById[l.from].international || hubById[l.to].international).sort((a, b) => b.shipments - a.shipments)
-  const maxShip = Math.max(1, ...domestic.map((l) => l.shipments))
-  const maxVol = Math.max(1, ...volumes.values())
+  const abroad = lanes.filter((l) => hubById[l.from].international || hubById[l.to].international).sort((a, b) => b.n - a.n)
+  const maxN = Math.max(1, ...domestic.map((l) => l.n))
+  const hubN = new Map<string, number>()
+  for (const l of domestic) {
+    hubN.set(l.from, (hubN.get(l.from) ?? 0) + l.n)
+    hubN.set(l.to, (hubN.get(l.to) ?? 0) + l.n)
+  }
+  const maxHub = Math.max(1, ...hubN.values())
+  const focus = hover ?? selected
+  const card = lanes.find((l) => l.key === focus)
 
-  // Lanes in both directions (CGP->DHK and DHK->CGP) bend to opposite sides so both stay visible.
-  const curves = useMemo(
-    () =>
-      domestic.map((l) => {
-        const [x1, y1] = xy(l.from)
-        const [x2, y2] = xy(l.to)
-        const mx = (x1 + x2) / 2
-        const my = (y1 + y2) / 2
-        const len = Math.hypot(x2 - x1, y2 - y1) || 1
-        const bend = Math.min(36, len * 0.18)
-        const nx = -(y2 - y1) / len
-        const ny = (x2 - x1) / len
-        return { l, d: `M${x1},${y1} Q${mx + nx * bend},${my + ny * bend} ${x2},${y2}` }
-      }),
-    [domestic],
-  )
-  const active = lanes.find((l) => l.lane === hover)
+  const curve = (l: LaneRow) => {
+    const [x1, y1] = xy(l.from)
+    const [x2, y2] = xy(l.to)
+    const len = Math.hypot(x2 - x1, y2 - y1) || 1
+    const bend = Math.min(36, len * 0.18)
+    const mx = (x1 + x2) / 2 - ((y2 - y1) / len) * bend
+    const my = (y1 + y2) / 2 + ((x2 - x1) / len) * bend
+    return `M${x1},${y1} Q${mx},${my} ${x2},${y2}`
+  }
 
   return (
     <div className="map">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Map of Bangladesh with freight lanes coloured by on-time delivery">
-        <path d={path(bd) ?? ''} className="map-land" />
-        <text x={300} y={H - 18} className="map-sea">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Map of Bangladesh: freight lanes coloured by on-time delivery">
+        <path d={path(bd) ?? ''} className="map-land" onClick={() => onSelect(null)} />
+        <text x={W - 40} y={H - 14} textAnchor="end" className="map-sea">
           Bay of Bengal
         </text>
-        {curves
-          .sort((a, b) => a.l.shipments - b.l.shipments)
-          .map(({ l, d }) => (
+        {[...domestic]
+          .sort((a, b) => a.n - b.n)
+          .map((l) => (
             <path
-              key={l.lane}
-              d={d}
-              className={`map-lane${hover && hover !== l.lane ? ' dim' : ''}`}
+              key={l.key}
+              d={curve(l)}
+              className={`map-lane${focus && focus !== l.key ? ' dim' : ''}${selected === l.key ? ' on' : ''}`}
               stroke={statusColor(l.otd)}
-              strokeWidth={1.5 + 7 * Math.sqrt(l.shipments / maxShip)}
+              strokeWidth={1.5 + 7 * Math.sqrt(l.n / maxN)}
               tabIndex={0}
-              onMouseEnter={() => setHover(l.lane)}
+              role="button"
+              aria-pressed={selected === l.key}
+              aria-label={`${hubById[l.from].short} to ${hubById[l.to].short}, ${pct(l.otd)} on time`}
+              onMouseEnter={() => setHover(l.key)}
               onMouseLeave={() => setHover(null)}
-              onFocus={() => setHover(l.lane)}
+              onFocus={() => setHover(l.key)}
               onBlur={() => setHover(null)}
-            >
-              <title>{`${hubById[l.from].short} to ${hubById[l.to].short}: ${pct(l.otd)} on time`}</title>
-            </path>
+              onClick={() => onSelect(selected === l.key ? null : l.key)}
+              onKeyDown={(e) => (e.key === 'Enter' ? onSelect(selected === l.key ? null : l.key) : null)}
+            />
           ))}
-        {HUBS.filter((h) => !h.international && h.id !== 'HSIA' && volumes.has(h.id)).map((h) => {
+        {HUBS.filter((h) => !h.international && hubN.has(h.id)).map((h) => {
           const [x, y] = xy(h.id)
           const lab = LABEL[h.id]
-          const r = 3 + 6 * Math.sqrt((volumes.get(h.id) ?? 0) / maxVol)
           return (
-            <g key={h.id}>
-              <circle cx={x} cy={y} r={r} className="map-hub" />
-              <text x={x + lab.dx} y={y + lab.dy} textAnchor={lab.anchor} className="map-label">
-                {h.short}
-              </text>
+            <g key={h.id} className="map-hub-g">
+              <circle cx={x} cy={y} r={3 + 6 * Math.sqrt((hubN.get(h.id) ?? 0) / maxHub)} className="map-hub" />
+              {lab ? (
+                <text x={x + lab.dx} y={y + lab.dy} textAnchor={lab.anchor} className="map-label">
+                  {h.short}
+                </text>
+              ) : null}
             </g>
           )
         })}
       </svg>
 
-      {active ? (
+      {card ? (
         <div className="map-card" aria-live="polite">
           <p className="map-card-title">
-            {hubById[active.from].short} to {hubById[active.to].short}
+            {hubById[card.from].short} to {hubById[card.to].short}
+            <span>{MODE_LABEL[card.mode]}</span>
           </p>
           <dl>
             <dt>On time</dt>
-            <dd style={{ color: statusColor(active.otd) }}>{pct(active.otd)}</dd>
-            <dt>Shipments</dt>
-            <dd>{int(active.shipments)}</dd>
+            <dd className="hi">{pct(card.otd)}</dd>
+            <dt>Delivered</dt>
+            <dd>{int(card.n)}</dd>
             <dt>SLA breaches</dt>
-            <dd>{int(active.breaches)}</dd>
+            <dd>{int(card.breaches)}</dd>
             <dt>Average delay when late</dt>
-            <dd>{hours(active.avgDelay)}</dd>
+            <dd>{hours(card.avgDelay)}</dd>
             <dt>Cost per shipment</dt>
-            <dd>{bdt(active.costPerShipment)}</dd>
+            <dd>{bdt(card.costPerShipment)}</dd>
           </dl>
+          <button className="map-card-open" onClick={() => onOpen(card.key)}>
+            Open lane details
+          </button>
         </div>
-      ) : null}
+      ) : (
+        <p className="map-hint">Click a lane to filter every chart on this page. Click again to clear.</p>
+      )}
 
       <div className="map-abroad">
         <p className="map-abroad-title">Sea and air lanes</p>
         <table>
           <tbody>
             {abroad.map((l) => (
-              <tr key={l.lane} onMouseEnter={() => setHover(l.lane)} onMouseLeave={() => setHover(null)}>
+              <tr
+                key={l.key}
+                className={selected === l.key ? 'on' : ''}
+                onClick={() => onSelect(selected === l.key ? null : l.key)}
+                onMouseEnter={() => setHover(l.key)}
+                onMouseLeave={() => setHover(null)}
+              >
                 <td>
                   {hubById[l.from].short} to {hubById[l.to].short}
                 </td>
@@ -139,10 +164,10 @@ export function NetworkMap({ lanes, volumes }: { lanes: LaneStat[]; volumes: Map
         </table>
       </div>
 
-      <div className="map-legend" aria-hidden="true">
+      <div className="legend" aria-hidden="true">
         <span>
           <i style={{ background: 'var(--ok)' }} />
-          On target ({OTD_TARGET}%+)
+          {OTD_TARGET}% or better
         </span>
         <span>
           <i style={{ background: 'var(--warn)' }} />

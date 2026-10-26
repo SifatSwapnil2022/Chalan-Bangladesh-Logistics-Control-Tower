@@ -1,0 +1,29 @@
+{
+  "name": "Chalan",
+  "dataColors": ["#22305C", "#4F6D9A", "#8FA6C6", "#2E7A55", "#C98F06", "#BE3B2B", "#7C8796", "#B9C3CD"],
+  "background": "#FFFFFF",
+  "foreground": "#172234",
+  "tableAccent": "#22305C",
+  "good": "#2E7A55",
+  "neutral": "#C98F06",
+  "bad": "#BE3B2B",
+  "maximum": "#BE3B2B",
+  "center": "#C98F06",
+  "minimum": "#2E7A55",
+  "textClasses": {
+    "title": { "fontFace": "Segoe UI Semibold", "fontSize": 12, "color": "#172234" },
+    "header": { "fontFace": "Segoe UI Semibold", "fontSize": 11, "color": "#172234" },
+    "label": { "fontFace": "Segoe UI", "fontSize": 10, "color": "#4B5768" },
+    "callout": { "fontFace": "Segoe UI Semibold", "fontSize": 28, "color": "#172234" }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "background": [{ "color": { "solid": { "color": "#FFFFFF" } }, "transparency": 0 }],
+        "border": [{ "show": false }],
+        "dropShadow": [{ "show": false }]
+      }
+    },
+    "page": { "*": { "background": [{ "color": { "solid": { "color": "#E8ECEF" } }, "transparency": 0 }] } }
+  }
+}

@@ -1,0 +1,15 @@
+hub_id,hub_name,short_name,latitude,longitude,is_international
+DHK,Dhaka (Tejgaon),Dhaka,23.763,90.393,0
+HSIA,Dhaka Airport (HSIA),HSIA,23.843,90.398,0
+CGP,Chattogram Port,Chattogram,22.31,91.8,0
+GZP,Gazipur,Gazipur,23.999,90.42,0
+NGJ,Narayanganj,Narayanganj,23.62,90.5,0
+SVR,Savar EPZ,Savar,23.858,90.266,0
+CML,Cumilla,Cumilla,23.461,91.185,0
+SYL,Sylhet,Sylhet,24.894,91.868,0
+MGL,Khulna (Mongla),Mongla,22.49,89.6,0
+BGR,Bogura,Bogura,24.848,89.373,0
+SIN,Singapore,Singapore,1.29,103.85,1
+CMB,Colombo,Colombo,6.93,79.85,1
+DXB,Dubai,Dubai,25.2,55.27,1
+SHA,Shanghai,Shanghai,31.23,121.47,1
